@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Таймер</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #1e5799, #2989d8, #207cca, #7db9e8);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+        
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .timer-container {
+            background-color: rgba(255, 255, 255, 0.9);
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+        
+        .timer-display {
+            font-size: 3.5rem;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+        
+        .timer-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 25px;
+        }
+        
+        .timer-btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 24px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            outline: none;
+            min-width: 100px;
+        }
+        
+        .timer-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .timer-btn:active {
+            transform: translateY(0);
+        }
+        
+        .timer-btn.reset {
+            background-color: #e74c3c;
+        }
+        
+        .timer-btn.reset:hover {
+            background-color: #c0392b;
+        }
+        
+        .timer-input-container {
+            margin-bottom: 20px;
+        }
+        
+        .timer-input {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .input-group input {
+            width: 70px;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            text-align: center;
+        }
+        
+        .input-group span {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .progress-ring {
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+            margin: 0 auto;
+        }
+        
+        .progress-ring-circle {
+            transition: stroke-dashoffset 0.3s;
+            stroke: #3498db;
+            stroke-width: 6;
+            fill: transparent;
+        }
+        
+        .progress-ring-background {
+            stroke: #e6e6e6;
+            stroke-width: 6;
+            fill: transparent;
+        }
+        
+        .timer-title {
+            font-size: 1.8rem;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="timer-container">
+        <h1 class="timer-title">Таймер</h1>
+        
+        <div class="timer-input-container">
+            <div class="timer-input">
+                <div class="input-group">
+                    <input type="number" id="hours" min="0" max="99" value="0">
+                    <span>Часове</span>
+                </div>
+                <div class="input-group">
+                    <input type="number" id="minutes" min="0" max="59" value="5">
+                    <span>Минути</span>
+                </div>
+                <div class="input-group">
+                    <input type="number" id="seconds" min="0" max="59" value="0">
+                    <span>Секунди</span>
+                </div>
+            </div>
+        </div>
+        
+        <svg class="progress-ring" width="200" height="200">
+            <circle class="progress-ring-background" cx="100" cy="100" r="90"></circle>
+            <circle class="progress-ring-circle" cx="100" cy="100" r="90" stroke-dasharray="565.48" stroke-dashoffset="0"></circle>
+        </svg>
+        
+        <div class="timer-display" id="timer">00:05:00</div>
+        
+        <div class="timer-controls">
+            <button class="timer-btn start" id="startBtn">Старт</button>
+            <button class="timer-btn pause" id="pauseBtn" disabled>Пауза</button>
+            <button class="timer-btn reset" id="resetBtn">Нулиране</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const hoursInput = document.getElementById('hours');
+            const minutesInput = document.getElementById('minutes');
+            const secondsInput = document.getElementById('seconds');
+            const timerDisplay = document.getElementById('timer');
+            const startBtn = document.getElementById('startBtn');
+            const pauseBtn = document.getElementById('pauseBtn');
+            const resetBtn = document.getElementById('resetBtn');
+            const progressRing = document.querySelector('.progress-ring-circle');
+            
+            let interval;
+            let totalSeconds = 0;
+            let initialTotalSeconds = 0;
+            let isRunning = false;
+            const circumference = 2 * Math.PI * 90;
+            
+            progressRing.style.strokeDasharray = circumference;
+            progressRing.style.strokeDashoffset = '0';
+            
+            // Restrict input to valid values
+            hoursInput.addEventListener('change', function() {
+                if (this.value < 0) this.value = 0;
+                if (this.value > 99) this.value = 99;
+                updateTimerDisplay();
+            });
+            
+            minutesInput.addEventListener('change', function() {
+                if (this.value < 0) this.value = 0;
+                if (this.value > 59) this.value = 59;
+                updateTimerDisplay();
+            });
+            
+            secondsInput.addEventListener('change', function() {
+                if (this.value < 0) this.value = 0;
+                if (this.value > 59) this.value = 59;
+                updateTimerDisplay();
+            });
+            
+            // Initialize timer display
+            updateTimerDisplay();
+            
+            function updateTimerDisplay() {
+                const hours = parseInt(hoursInput.value) || 0;
+                const minutes = parseInt(minutesInput.value) || 0;
+                const seconds = parseInt(secondsInput.value) || 0;
+                
+                totalSeconds = hours * 3600 + minutes * 60 + seconds;
+                initialTotalSeconds = totalSeconds;
+                
+                const displayHours = String(hours).padStart(2, '0');
+                const displayMinutes = String(minutes).padStart(2, '0');
+                const displaySeconds = String(seconds).padStart(2, '0');
+                
+                timerDisplay.textContent = `${displayHours}:${displayMinutes}:${displaySeconds}`;
+                updateProgressRing();
+            }
+            
+            function updateProgressRing() {
+                if (initialTotalSeconds === 0) return;
+                
+                const percentage = totalSeconds / initialTotalSeconds;
+                const offset = circumference - percentage * circumference;
+                progressRing.style.strokeDashoffset = offset;
+            }
+            
+            startBtn.addEventListener('click', function() {
+                if (isRunning || totalSeconds === 0) return;
+                
+                // Disable inputs when timer is running
+                hoursInput.disabled = true;
+                minutesInput.disabled = true;
+                secondsInput.disabled = true;
+                
+                startBtn.disabled = true;
+                pauseBtn.disabled = false;
+                
+                isRunning = true;
+                
+                interval = setInterval(function() {
+                    if (totalSeconds <= 0) {
+                        clearInterval(interval);
+                        timerComplete();
+                        return;
+                    }
+                    
+                    totalSeconds--;
+                    
+                    const hours = Math.floor(totalSeconds / 3600);
+                    const minutes = Math.floor((totalSeconds % 3600) / 60);
+                    const seconds = totalSeconds % 60;
+                    
+                    const displayHours = String(hours).padStart(2, '0');
+                    const displayMinutes = String(minutes).padStart(2, '0');
+                    const displaySeconds = String(seconds).padStart(2, '0');
+                    
+                    timerDisplay.textContent = `${displayHours}:${displayMinutes}:${displaySeconds}`;
+                    updateProgressRing();
+                }, 1000);
+            });
+            
+            pauseBtn.addEventListener('click', function() {
+                clearInterval(interval);
+                isRunning = false;
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+            });
+            
+            resetBtn.addEventListener('click', function() {
+                clearInterval(interval);
+                isRunning = false;
+                
+                hoursInput.disabled = false;
+                minutesInput.disabled = false;
+                secondsInput.disabled = false;
+                
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                
+                updateTimerDisplay();
+            });
+            
+            function timerComplete() {
+                isRunning = false;
+                hoursInput.disabled = false;
+                minutesInput.disabled = false;
+                secondsInput.disabled = false;
+                startBtn.disabled = false;
+                pauseBtn.disabled = true;
+                
+                // Visual and audio feedback when timer completes
+                timerDisplay.style.color = '#27ae60';
+                setTimeout(() => {
+                    timerDisplay.style.color = '#333';
+                }, 3000);
+                
+                // You could add a sound here
+                // const sound = new Audio('alarm.mp3');
+                // sound.play();
+                
+                alert('Времето изтече!');
+            }
+        });
+    </script>
+</body>
+</html>
